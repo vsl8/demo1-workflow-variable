@@ -2,7 +2,7 @@
 name: Demo CI/CD Pipeline
  
 on:
-  woworkflow_dispatch:
+  workflow_dispatch:
     
  
 jobs:
