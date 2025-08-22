@@ -1,0 +1,256 @@
+# GitHub Workflow: Bash Script Variables Demo
+# This workflow demonstrates various ways to use variables in bash scripts
+# within GitHub Actions, including single-line and multi-line commands
+
+name: Bash Script Variables Demo
+
+# Trigger the workflow on push to main branch or manual dispatch
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      user_message:
+        description: 'Custom message from user'
+        required: false
+        default: 'Hello from workflow dispatch!'
+
+# Environment variables at workflow level
+env:
+  GLOBAL_VAR: "This is a global variable"
+  APP_VERSION: "1.0.0"
+  ENVIRONMENT: "demo"
+
+jobs:
+  bash-variables-demo:
+    runs-on: ubuntu-latest
+    
+    # Job-level environment variables
+    env:
+      JOB_VAR: "This is a job-level variable"
+      DATABASE_URL: "postgresql://localhost:5432/demo"
+    
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Single-line bash commands with variables
+      - name: Single-line bash commands
+        env:
+          STEP_VAR: "This is a step-level variable"
+        run: |
+          echo "=== SINGLE-LINE BASH COMMANDS ==="
+          echo "User-defined variable: $STEP_VAR"
+          echo "Global variable: $GLOBAL_VAR"
+          echo "Job variable: $JOB_VAR"
+
+      # Step 3: Built-in GitHub variables (single-line)
+      - name: GitHub built-in variables (single-line)
+        run: |
+          echo "=== GITHUB BUILT-IN VARIABLES ==="
+          echo "Repository: ${{ github.repository }}"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "SHA: ${{ github.sha }}"
+          echo "Ref: ${{ github.ref }}"
+          echo "Workflow: ${{ github.workflow }}"
+          echo "Run ID: ${{ github.run_id }}"
+          echo "Run number: ${{ github.run_number }}"
+
+      # Step 4: Multi-line bash script with variables
+      - name: Multi-line bash script
+        env:
+          SERVICE_NAME: "my-application"
+          PORT: "8080"
+          DEBUG_MODE: "true"
+        run: |
+          echo "=== MULTI-LINE BASH SCRIPT ==="
+          
+          # Function to print formatted output
+          print_info() {
+              local title="$1"
+              local value="$2"
+              echo "📋 $title: $value"
+          }
+          
+          # Using variables in multi-line script
+          print_info "Service Name" "$SERVICE_NAME"
+          print_info "Port" "$PORT"
+          print_info "Debug Mode" "$DEBUG_MODE"
+          print_info "App Version" "$APP_VERSION"
+          
+          # Conditional logic based on variables
+          if [ "$DEBUG_MODE" = "true" ]; then
+              echo "🐛 Debug mode is enabled"
+              echo "   - Verbose logging activated"
+              echo "   - Performance monitoring enabled"
+          else
+              echo "🚀 Running in production mode"
+          fi
+          
+          # Create a temporary configuration file
+          echo "Creating configuration file..."
+          cat > /tmp/app.config << EOF
+          [application]
+          name=$SERVICE_NAME
+          version=$APP_VERSION
+          port=$PORT
+          environment=$ENVIRONMENT
+          debug=$DEBUG_MODE
+          
+          [database]
+          url=$DATABASE_URL
+          
+          [github]
+          repository=${{ github.repository }}
+          branch=${{ github.ref_name }}
+          commit=${{ github.sha }}
+          EOF
+          
+          echo "Configuration file contents:"
+          cat /tmp/app.config
+
+      # Step 5: Using workflow dispatch input variables
+      - name: Workflow dispatch input variables
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "=== WORKFLOW DISPATCH INPUT ==="
+          echo "User message: ${{ github.event.inputs.user_message }}"
+
+      # Step 6: Environment-specific variables
+      - name: Environment-specific configuration
+        env:
+          # Different values based on branch
+          CONFIG_FILE: ${{ github.ref_name == 'main' && 'production.yml' || 'development.yml' }}
+          IS_PRODUCTION: ${{ github.ref_name == 'main' }}
+        run: |
+          echo "=== ENVIRONMENT-SPECIFIC CONFIG ==="
+          echo "Config file: $CONFIG_FILE"
+          echo "Is production: $IS_PRODUCTION"
+          
+          if [ "$IS_PRODUCTION" = "true" ]; then
+              echo "🏭 Production environment detected"
+              echo "   - Using production database"
+              echo "   - Error reporting enabled"
+              echo "   - Caching enabled"
+          else
+              echo "🧪 Development environment detected"
+              echo "   - Using local database"
+              echo "   - Debug mode enabled"
+              echo "   - Hot reload enabled"
+          fi
+
+      # Step 7: Working with arrays and complex variables
+      - name: Arrays and complex variables
+        run: |
+          echo "=== ARRAYS AND COMPLEX VARIABLES ==="
+          
+          # Define arrays
+          SERVICES=("api" "frontend" "database" "cache")
+          PORTS=(3000 3001 5432 6379)
+          
+          # Loop through arrays
+          echo "Services and their ports:"
+          for i in "${!SERVICES[@]}"; do
+              echo "  ${SERVICES[$i]}: ${PORTS[$i]}"
+          done
+          
+          # Environment-based configuration
+          case "$ENVIRONMENT" in
+              "production")
+                  REPLICA_COUNT=3
+                  MEMORY_LIMIT="2Gi"
+                  ;;
+              "staging")
+                  REPLICA_COUNT=2
+                  MEMORY_LIMIT="1Gi"
+                  ;;
+              *)
+                  REPLICA_COUNT=1
+                  MEMORY_LIMIT="512Mi"
+                  ;;
+          esac
+          
+          echo "Environment: $ENVIRONMENT"
+          echo "Replica count: $REPLICA_COUNT"
+          echo "Memory limit: $MEMORY_LIMIT"
+
+      # Step 8: Setting variables for subsequent steps
+      - name: Set output variables
+        id: set-vars
+        run: |
+          echo "=== SETTING OUTPUT VARIABLES ==="
+          
+          # Generate dynamic values
+          BUILD_NUMBER=$(date +%Y%m%d-%H%M%S)
+          COMMIT_SHORT=${{ github.sha }}
+          COMMIT_SHORT=${COMMIT_SHORT:0:7}
+          
+          # Set output variables for other steps
+          echo "build-number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "commit-short=$COMMIT_SHORT" >> $GITHUB_OUTPUT
+          echo "full-version=$APP_VERSION-$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          
+          echo "Build number: $BUILD_NUMBER"
+          echo "Short commit: $COMMIT_SHORT"
+
+      # Step 9: Using output variables from previous step
+      - name: Use output variables
+        run: |
+          echo "=== USING OUTPUT VARIABLES ==="
+          echo "Build number from previous step: ${{ steps.set-vars.outputs.build-number }}"
+          echo "Short commit: ${{ steps.set-vars.outputs.commit-short }}"
+          echo "Full version: ${{ steps.set-vars.outputs.full-version }}"
+
+      # Step 10: Advanced variable manipulation
+      - name: Advanced variable manipulation
+        env:
+          ORIGINAL_STRING: "  Hello, GitHub Actions World!  "
+          FILE_PATH: "/home/runner/work/repo/file.txt"
+        run: |
+          echo "=== ADVANCED VARIABLE MANIPULATION ==="
+          
+          # String manipulation
+          echo "Original: '$ORIGINAL_STRING'"
+          TRIMMED=${ORIGINAL_STRING// /}  # Remove spaces
+          echo "Trimmed: '$TRIMMED'"
+          
+          UPPER_CASE=${ORIGINAL_STRING^^}  # Convert to uppercase
+          echo "Upper case: '$UPPER_CASE'"
+          
+          LOWER_CASE=${ORIGINAL_STRING,,}  # Convert to lowercase
+          echo "Lower case: '$LOWER_CASE'"
+          
+          # Path manipulation
+          echo "Full path: $FILE_PATH"
+          echo "Directory: ${FILE_PATH%/*}"
+          echo "Filename: ${FILE_PATH##*/}"
+          echo "Extension: ${FILE_PATH##*.}"
+          
+          # Default values
+          UNDEFINED_VAR=${SOME_UNDEFINED_VAR:-"Default value"}
+          echo "Undefined variable with default: $UNDEFINED_VAR"
+
+      # Step 11: Summary
+      - name: Summary
+        run: |
+          echo "=== WORKFLOW SUMMARY ==="
+          echo "✅ Demonstrated single-line bash commands"
+          echo "✅ Demonstrated multi-line bash scripts"
+          echo "✅ Used user-defined variables at different levels"
+          echo "✅ Used GitHub built-in variables"
+          echo "✅ Showed conditional logic with variables"
+          echo "✅ Created configuration files using variables"
+          echo "✅ Demonstrated variable manipulation"
+          echo "✅ Set and used output variables between steps"
+          echo ""
+          echo "🎯 Key concepts covered:"
+          echo "   - Environment variables (global, job, step level)"
+          echo "   - GitHub context variables"
+          echo "   - Workflow dispatch inputs"
+          echo "   - Output variables between steps"
+          echo "   - Conditional expressions"
+          echo "   - String and path manipulation"
