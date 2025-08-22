@@ -6,10 +6,6 @@ name: Bash Script Variables Demo
 
 # Trigger the workflow on push to main branch or manual dispatch
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
     inputs:
       user_message:
